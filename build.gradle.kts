@@ -19,8 +19,13 @@ repositories {
 }
 
 val springdocOpenapiStarter = properties["springdocOpenapiStarter"]
+val springCloudAwsVersion = properties["springCloudAwsVersion"]
+
 
 dependencies {
+	implementation("io.awspring.cloud:spring-cloud-aws-starter-s3")
+	implementation("io.awspring.cloud:spring-cloud-aws-starter-sns")
+
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$springdocOpenapiStarter")
 
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -34,6 +39,12 @@ dependencies {
 	runtimeOnly("org.postgresql:postgresql")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
+}
+
+dependencyManagement {
+	imports {
+		mavenBom("io.awspring.cloud:spring-cloud-aws-dependencies:$springCloudAwsVersion")
+	}
 }
 
 tasks.withType<KotlinCompile> {

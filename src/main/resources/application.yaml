@@ -37,3 +37,34 @@ spring:
             leak-detection-threshold: 30000
             connection-timeout: 5000
             connection-test-query: SELECT 1
+
+    cloud:
+        aws:
+            endpoint: http://localhost:4566
+            region:
+                static: us-east-1
+            credentials:
+                access-key: noop
+                secret-key: noop
+            s3:
+                path-style-access-enabled: true
+
+    task:
+        execution:
+            pool:
+                core-size: 5  # Configure the core pool size
+                max-size: 10  # Configure the maximum pool size
+
+    servlet:
+        multipart:
+            max-request-size: 1GB
+            max-file-size: 1GB
+---
+streaming-service:
+    topics:
+        arns:
+            episode-uploaded: arn:aws:sns:us-east-1:000000000000:EPISODE_UPLOADED_NOTIFICATION
+    buckets:
+        base-url: ${spring.cloud.aws.endpoint}
+        names:
+            videos: videos-bucket

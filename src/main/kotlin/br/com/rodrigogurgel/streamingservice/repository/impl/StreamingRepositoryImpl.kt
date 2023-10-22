@@ -19,7 +19,7 @@ class StreamingRepositoryImpl(
         private const val INSERT_STREAMING_WITH_RETURNING = """
             insert into streaming (title, description, image, alternative_local_titles, release_date, "type", genres, audio_locales,
                        subtitle_locales, content_provider)
-            values (:title, :description, :image, (:alternative_local_titles)::jsonb, :release_date, (:type)::streaming_type, :genres, :audio_locales,
+            values (:title, :description, :image, (:alternative_local_titles)::jsonb, :release_date, :type, :genres, :audio_locales,
                     :subtitle_locales, :content_provider)
             returning id, title, description, image, alternative_local_titles, release_date, "type", genres, audio_locales, 
                 subtitle_locales, content_provider, created_at, updated_at;

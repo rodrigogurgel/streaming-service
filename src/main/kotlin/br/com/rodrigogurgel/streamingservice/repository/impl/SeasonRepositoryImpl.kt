@@ -16,11 +16,23 @@ class SeasonRepositoryImpl(
             values (:title, :description, :streaming_id, :total_episodes, :release_date)
             returning id, streaming_id, title, description, total_episodes, release_date, created_at, updated_at;
         """
+
+        private const val SELECT_BY_ID_AND_STREAMING_ID = """
+            select id, title, description, streaming_id, total_episodes, release_date, created_at, updated_at
+            from season
+            where id = :id
+              and streaming_id = :streaming_id;
+        """
     }
 
     override fun insert(season: Season): Season {
         val params = buildParams(season)
         return namedParameterJdbcTemplate.query(INSERT_SEASON_WITH_RETURNING, params, SeasonRowMapper()).first()
+    }
+
+    override fun selectByIdAndStreamingId(seasonId: Long, streamingId: Long): Season? {
+        val params = mapOf("id" to seasonId, "streaming_id" to streamingId)
+        return namedParameterJdbcTemplate.query(SELECT_BY_ID_AND_STREAMING_ID, params, SeasonRowMapper()).firstOrNull()
     }
 
     private fun buildParams(season: Season): Map<String, Any?> {
