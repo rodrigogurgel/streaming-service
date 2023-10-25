@@ -7,4 +7,6 @@ import java.util.UUID
 interface UploadProcessRepository {
     fun insert(uploadProcess: UploadProcess): UploadProcess
     fun updateStatus(uploadProcessId: UUID, status: UploadProcessStatusEnum)
+
+    fun selectById(uploadProcessId: UUID): UploadProcess
 }

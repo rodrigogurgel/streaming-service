@@ -1,7 +1,7 @@
 package br.com.rodrigogurgel.streamingservice.repository.mapper
 
 import br.com.rodrigogurgel.streamingservice.domain.Episode
-import com.fasterxml.jackson.core.type.TypeReference
+import br.com.rodrigogurgel.streamingservice.domain.EpisodeMetadata
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.sql.ResultSet
 import java.time.OffsetDateTime
@@ -17,9 +17,8 @@ class EpisodeRowMapper : RowMapper<Episode> {
             metadata = jacksonObjectMapper()
                 .readValue(
                     rs.getString("metadata"),
-                    object : TypeReference<Map<String, String>>() {}
+                    EpisodeMetadata::class.java
                 ),
-            link = rs.getString("link"),
             releaseDate = rs.getTimestamp("release_date")?.let {
                 OffsetDateTime.of(
                     it.toLocalDateTime(),

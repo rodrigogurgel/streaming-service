@@ -6,7 +6,7 @@ logging:
         org:
             springframework:
                 jdbc:
-                    core: TRACE
+                    core: info
 ---
 management:
     endpoints:
@@ -65,6 +65,14 @@ streaming-service:
         arns:
             episode-uploaded: arn:aws:sns:us-east-1:000000000000:EPISODE_UPLOADED_NOTIFICATION
     buckets:
-        base-url: ${spring.cloud.aws.endpoint}
         names:
             videos: videos-bucket
+
+---
+hash:
+    secret: SECRET_KEY
+---
+vod:
+    ip:
+    base-url: http://${ip:localhost}/hls/vod/
+    suffix: .urlset/master.m3u8

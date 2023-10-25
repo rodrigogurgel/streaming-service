@@ -22,7 +22,14 @@ class UploadProcessRepositoryImpl(
 
         private const val UPDATE_STATUS_BY_ID = """
             update upload_process
-            set status = :status
+            set status = :status,
+                updated_at = now()
+            where id = :id;
+        """
+
+        private const val SELECT_BY_ID = """
+            select id, status, created_at, updated_at
+            from upload_process
             where id = :id;
         """
     }
@@ -38,6 +45,11 @@ class UploadProcessRepositoryImpl(
             "status" to status.value
         )
         namedParameterJdbcTemplate.update(UPDATE_STATUS_BY_ID, params)
+    }
+
+    override fun selectById(uploadProcessId: UUID): UploadProcess {
+        val params = mapOf("id" to uploadProcessId)
+        return namedParameterJdbcTemplate.query(SELECT_BY_ID, params, UploadProcessRowMapper()).first()
     }
 
     private fun buildParams(uploadProcess: UploadProcess): Map<String, Any?> {

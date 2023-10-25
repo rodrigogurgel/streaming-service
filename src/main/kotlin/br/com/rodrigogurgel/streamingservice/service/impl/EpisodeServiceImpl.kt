@@ -1,29 +1,27 @@
 package br.com.rodrigogurgel.streamingservice.service.impl
 
 import br.com.rodrigogurgel.streamingservice.cmd.episode.CreateEpisodeCMD
-import br.com.rodrigogurgel.streamingservice.cmd.notification.EpisodeUploadedNotificationCMD
+import br.com.rodrigogurgel.streamingservice.cmd.episode.PathEpisodeMetadataCMD
+import br.com.rodrigogurgel.streamingservice.config.properties.HashProperties
+import br.com.rodrigogurgel.streamingservice.config.properties.VodProperties
 import br.com.rodrigogurgel.streamingservice.converter.cmd.EpisodeCMDConverter
 import br.com.rodrigogurgel.streamingservice.converter.dto.EpisodeDTOConverter
-import br.com.rodrigogurgel.streamingservice.converter.dto.UploadProcessDTOConverter
-import br.com.rodrigogurgel.streamingservice.domain.UploadProcessStatusEnum
+import br.com.rodrigogurgel.streamingservice.domain.Episode
 import br.com.rodrigogurgel.streamingservice.dto.episode.EpisodeDTO
-import br.com.rodrigogurgel.streamingservice.dto.uploadprocess.UploadProcessDTO
 import br.com.rodrigogurgel.streamingservice.exception.SeasonNotFoundException
 import br.com.rodrigogurgel.streamingservice.repository.EpisodeRepository
 import br.com.rodrigogurgel.streamingservice.repository.SeasonRepository
 import br.com.rodrigogurgel.streamingservice.service.EpisodeService
-import br.com.rodrigogurgel.streamingservice.service.NotificationService
-import br.com.rodrigogurgel.streamingservice.service.UploadService
-import java.util.UUID
+import java.time.Duration
+import java.time.Instant
 import org.springframework.stereotype.Service
-import org.springframework.web.multipart.MultipartFile
 
 @Service
 class EpisodeServiceImpl(
     private val episodeRepository: EpisodeRepository,
     private val seasonRepository: SeasonRepository,
-    private val uploadService: UploadService,
-    private val notificationService: NotificationService,
+    private val vodProperties: VodProperties,
+    private val hashProperties: HashProperties,
 ) : EpisodeService {
     override fun create(streamingId: Long, seasonId: Long, createEpisodeCMD: CreateEpisodeCMD): EpisodeDTO {
         seasonRepository.selectByIdAndStreamingId(seasonId, streamingId) ?: throw SeasonNotFoundException(
@@ -36,19 +34,39 @@ class EpisodeServiceImpl(
         return EpisodeDTOConverter.from(episodeDb)
     }
 
-    override fun uploadVideo(episodeId: Long, file: MultipartFile): UploadProcessDTO {
-        val key = "$episodeId/original/file"
+    override fun fetchById(episodeId: Long): EpisodeDTO {
+        val episodeDb = episodeRepository.selectById(episodeId)
+        val link = buildLink(episodeDb)
+        return EpisodeDTOConverter.from(episodeDb, link)
+    }
 
-        val uploadProcessId = UUID.randomUUID()
-        val uploadProcess = uploadService.createUploadEpisodeProcess(episodeId, uploadProcessId)
-        uploadService.uploadFile(uploadProcessId, key, file.bytes, file.contentType) {
-            val episodeUploadedNotificationCMD = EpisodeUploadedNotificationCMD(
-                key = key, episodeId = episodeId
+    override fun pathEpisodeMetadata(episodeId: Long, pathEpisodeMetadataCMD: PathEpisodeMetadataCMD) {
+        val episodeDb = episodeRepository.selectById(episodeId)
+        val episodeMetadata = episodeDb.metadata.let {
+            it.copy(
+                filePath = pathEpisodeMetadataCMD.filePath ?: it.filePath,
+                qualities = pathEpisodeMetadataCMD.qualities ?: it.qualities,
             )
-            notificationService.notifyEpisodeUploaded(episodeUploadedNotificationCMD)
-            uploadService.updateStatus(uploadProcessId, UploadProcessStatusEnum.CONVERSION_PENDING)
+        }
+        episodeRepository.update(episodeDb.copy(metadata = episodeMetadata))
+    }
+
+    private fun buildLink(episode: Episode): String? {
+        if (!episode.metadata.filePath.isNullOrBlank() && episode.metadata.qualities.isEmpty()) return null
+
+        val now = Instant.now().plus(Duration.ofHours(1)).toEpochMilli().toDouble() / 1000
+        val expires = Math.round(now)
+        val token = hashProperties.hash("$expires ${vodProperties.ip} ${hashProperties.secret}")
+        val id = hashProperties.hash("${hashProperties.secret}${episode.id}")
+
+        val qualities = episode.metadata.qualities.joinToString(prefix = ",", postfix = ",", separator = ",") {
+            "_${it}p.mp4"
         }
 
-        return UploadProcessDTOConverter.from(uploadProcess)
+        val subtitles = episode.metadata.subtitles?.joinToString(postfix = ",", separator = ",") {
+            "lang/$it/subtitles_${it}.srt"
+        }
+
+        return "${vodProperties.baseUrl}$id/${episode.metadata.filePath}/$token/$expires/${qualities + subtitles}${vodProperties.suffix}"
     }
 }
